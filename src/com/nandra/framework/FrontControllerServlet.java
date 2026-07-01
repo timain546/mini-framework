@@ -2,14 +2,11 @@ package com.nandra.framework;
 
 import mg.itu.test.annotation.UrlMapping;
 import com.nandra.framework.outils.Mapping;
-import com.nandra.framework.outils.Utils;
 import com.nandra.framework.outils.UrlMethod;
 import com.nandra.framework.constant.HttpMethod;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -21,26 +18,8 @@ public class FrontControllerServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         super.init();
-        
-        String basePackage = this.getInitParameter("base-package");
-        
-        if (basePackage != null && !basePackage.trim().isEmpty()) {
-            List<Class<?>> controllerList = Utils.getControllerClasses(basePackage.trim());
-            
-            for (Class<?> controllerClass : controllerList) {
-                Method[] methods = controllerClass.getDeclaredMethods();
-                for (Method method : methods) {
-                    if (method.isAnnotationPresent(UrlMapping.class)) {
-                        UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
-                        
-                        Mapping mapping = new Mapping(controllerClass, method);
-                        this.mappingUrls.put(new UrlMethod(urlMapping), mapping);
-                    }
-                }
-            }
-        } else {
-            System.out.println("Attention : Aucun 'base-package' n'a été spécifié.");
-        }
+        ServletContext context = getServletContext();
+        this.mappingUrls = (Map<UrlMethod, Mapping>) context.getAttribute("mappingUrls");
     }
 
     @Override
