@@ -24,6 +24,8 @@ public class AppContextListener implements ServletContextListener {
         Map<UrlMethod, Mapping> mappingUrls = new HashMap<>();
 
         String basePackage = context.getInitParameter("base-package");
+        String prefix = context.getInitParameter("prefix");
+        String suffix = context.getInitParameter("suffix");
         
         if (basePackage != null && !basePackage.trim().isEmpty()) {
             try {
@@ -49,6 +51,8 @@ public class AppContextListener implements ServletContextListener {
         }
 
         context.setAttribute("mappingUrls", mappingUrls);
+        context.setAttribute("prefix", prefix);
+        context.setAttribute("suffix", suffix);
     }
 
     @Override
