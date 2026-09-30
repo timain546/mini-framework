@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nom du JAR de sortie
-JAR_NAME="mini-framework-v5.jar"
+JAR_NAME="sprint-6.jar"
 
 # Définition des dossiers
 SRC_DIR="src"
