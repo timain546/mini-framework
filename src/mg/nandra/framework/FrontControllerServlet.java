@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import java.io.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import java.lang.reflect.Parameter;
 import java.lang.annotation.Annotation;
 
 import java.util.Map;
@@ -75,7 +76,30 @@ public class FrontControllerServlet extends HttpServlet {
         if (matchedMapping != null) {
             try {
                 Object controllerInstance = matchedMapping.getControllerClass().getDeclaredConstructor().newInstance();
-                Object returnValue = matchedMapping.getMethod().invoke(controllerInstance);
+                
+                Parameter[] parameters = matchedMapping.getMethod().getParameters();
+                Object[] arguments = new Object[parameters.length];
+                
+                for (int i = 0; i < parameters.length; i++) {
+                    
+                    Parameter parameter = parameters[i];
+
+                    if (parameter.isAnnotationPresent(Param.class)) {
+
+                        Param param = parameter.getAnnotation(Param.class);
+                        String value = req.getParameter(param.value());
+                        arguments[i] = value;
+                    } else {
+
+                        arguments[i] = null;
+                    }
+                }
+
+                Object returnValue =
+                        matchedMapping.getMethod().invoke(
+                                controllerInstance,
+                                arguments
+                        );
 
                 boolean jsonResponse = matchedMapping.getMethod().isAnnotationPresent(JsonResponse.class);
 
