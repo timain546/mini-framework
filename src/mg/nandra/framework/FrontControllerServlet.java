@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import java.io.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.annotation.Annotation;
 
@@ -88,10 +89,17 @@ public class FrontControllerServlet extends HttpServlet {
 
                         Param param = parameter.getAnnotation(Param.class);
                         String value = req.getParameter(param.value());
-                        arguments[i] = value;
+                        arguments[i] = convertValue(
+                            value,
+                            parameter.getType()
+                        );
                     } else {
+                        Class<?> parameterType = parameter.getType();
 
-                        arguments[i] = null;
+                        arguments[i] = bindObject(
+                            parameterType,
+                            req
+                        );
                     }
                 }
 
@@ -179,5 +187,90 @@ public class FrontControllerServlet extends HttpServlet {
             }
             out.println("</body></html>");
         }
+    }
+
+    private Object convertValue(String value, Class<?> type)
+    {
+        if (type == String.class) {
+            return value;
+        }
+
+        if (type == int.class || type == Integer.class) {
+            return Integer.parseInt(value);
+        }
+
+        if (type == long.class || type == Long.class) {
+            return Long.parseLong(value);
+        }
+
+        if (type == double.class || type == Double.class) {
+            return Double.parseDouble(value);
+        }
+
+        if (type == float.class || type == Float.class) {
+            return Float.parseFloat(value);
+        }
+
+        if (type == boolean.class || type == Boolean.class) {
+            return Boolean.parseBoolean(value);
+        }
+
+        if (type == short.class || type == Short.class) {
+            return Short.parseShort(value);
+        }
+
+        if (type == byte.class || type == Byte.class) {
+            return Byte.parseByte(value);
+        }
+
+        if (type == char.class || type == Character.class) {
+            return value.charAt(0);
+        }
+
+        throw new IllegalArgumentException(
+            "Type non supporté : " + type.getName()
+        );
+    }
+
+    private Object bindObject(Class<?> objectClass, HttpServletRequest req)
+    throws Exception
+    {
+        Object object = objectClass
+                .getDeclaredConstructor()
+                .newInstance();
+
+        Method[] methods = objectClass.getMethods();
+
+        for (Method method : methods) {
+
+            String methodName = method.getName();
+
+            if (!methodName.startsWith("set")) {
+                continue;
+            }
+
+            if (method.getParameterCount() != 1) {
+                continue;
+            }
+
+            String fieldName = methodName.substring(3);
+
+            fieldName = Character.toLowerCase(fieldName.charAt(0))
+                    + fieldName.substring(1);
+
+            String value = req.getParameter(fieldName);
+
+            if (value == null) {
+                continue;
+            }
+
+            Class<?> parameterType = method.getParameterTypes()[0];
+
+            Object convertedValue = convertValue(value, parameterType);
+
+            method.invoke(object, convertedValue);
+        }
+
+        return object;
     }
 }
