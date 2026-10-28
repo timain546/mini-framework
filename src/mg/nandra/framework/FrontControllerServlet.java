@@ -17,7 +17,10 @@ import java.lang.annotation.Annotation;
 import jakarta.servlet.annotation.MultipartConfig;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.HashMap;
+import java.util.Collection;
 
 // Multipart est important sinon getPart() levera une exception
 
@@ -31,6 +34,8 @@ public class FrontControllerServlet extends HttpServlet {
     private Map<UrlMethod, Mapping> mappingUrls = new HashMap<>();
     private String prefix;
     private String suffix;
+    private String authUserKey;
+    private String authRoleKey;
 
     @Override
     public void init() throws ServletException {
@@ -39,6 +44,10 @@ public class FrontControllerServlet extends HttpServlet {
         this.mappingUrls = (Map<UrlMethod, Mapping>) context.getAttribute("mappingUrls");
         this.prefix = (String) context.getAttribute("prefix");
         this.suffix = (String) context.getAttribute("suffix");
+        String uk = (String) context.getAttribute("authUserKey");
+        this.authUserKey = (uk == null || uk.trim().isEmpty()) ? "user" : uk.trim();
+        String rk = (String) context.getAttribute("authRoleKey");
+        this.authRoleKey = (rk == null || rk.trim().isEmpty()) ? null : rk.trim();
     }
 
     @Override
@@ -84,6 +93,24 @@ public class FrontControllerServlet extends HttpServlet {
         Mapping matchedMapping = mappingUrls.get(new UrlMethod(urlMapping));
 
         if (matchedMapping != null) {
+            Authentification auth = matchedMapping.getMethod().getAnnotation(Authentification.class);
+            if (auth != null) {
+                int status = verifierAcces(req, auth);
+                if (status != 0) {
+                    res.setStatus(status);
+                    res.setContentType("text/html;charset=UTF-8");
+                    PrintWriter out = res.getWriter();
+                    out.println("<!DOCTYPE html><html><body>");
+                    if (status == HttpServletResponse.SC_UNAUTHORIZED) {
+                        out.println("<h1 style='color: red;'>401 - Authentification requise</h1>");
+                    } else {
+                        out.println("<h1 style='color: red;'>403 - Accès refusé</h1>");
+                    }
+                    out.println("</body></html>");
+                    return;
+                }
+            }
+
             try {
                 Object controllerInstance = matchedMapping.getControllerClass().getDeclaredConstructor().newInstance();
 
@@ -318,4 +345,49 @@ public class FrontControllerServlet extends HttpServlet {
         }
     }
 
+    private int verifierAcces(HttpServletRequest req, Authentification auth) {
+    HttpSession s = req.getSession(false);
+    Object user = (s == null) ? null : s.getAttribute(authUserKey);
+    if (user == null) return HttpServletResponse.SC_UNAUTHORIZED;
+
+    String[] requis = auth.role();
+    if (requis.length == 0) return 0;
+
+    Set<String> rolesUser = rolesDe(s, user);
+    for (String r : requis) {
+        if (rolesUser.contains(r)) return 0;
+    }
+    return HttpServletResponse.SC_FORBIDDEN;
+}
+
+    private Set<String> rolesDe(HttpSession s, Object user) {
+        Object source = null;
+
+        if (authRoleKey != null) {
+            source = s.getAttribute(authRoleKey);
+        } else {
+            for (String nomMethode : new String[] {"getRole", "getRoles"}) {
+                try {
+                    source = user.getClass().getMethod(nomMethode).invoke(user);
+                    break;
+                } catch (Exception ignored) { }
+            }
+        }
+
+        Set<String> roles = new HashSet<>();
+        if (source == null) return roles;
+
+        if (source instanceof Collection) {
+            for (Object o : (Collection<?>) source) {
+                if (o != null) roles.add(o.toString());
+            }
+        } else if (source instanceof Object[]) {
+            for (Object o : (Object[]) source) {
+                if (o != null) roles.add(o.toString());
+            }
+        } else {
+            roles.add(source.toString());
+        }
+        return roles;
+    }
 }
