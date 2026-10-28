@@ -26,6 +26,8 @@ public class AppContextListener implements ServletContextListener {
         String basePackage = context.getInitParameter("base-package");
         String prefix = context.getInitParameter("prefix");
         String suffix = context.getInitParameter("suffix");
+        String authUserKey = context.getInitParameter("auth-user-key");
+        String authRoleKey = context.getInitParameter("auth-role-key");
 
         if (basePackage != null && !basePackage.trim().isEmpty()) {
             try {
@@ -53,6 +55,8 @@ public class AppContextListener implements ServletContextListener {
         context.setAttribute("mappingUrls", mappingUrls);
         context.setAttribute("prefix", prefix);
         context.setAttribute("suffix", suffix);
+        context.setAttribute("authUserKey", authUserKey);
+        context.setAttribute("authRoleKey", authRoleKey);
     }
 
     @Override

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nom du JAR de sortie
-JAR_NAME="sprint-9.jar"
+JAR_NAME="sprint-10-bis.jar"
 
 # Définition des dossiers
 SRC_DIR="src"
