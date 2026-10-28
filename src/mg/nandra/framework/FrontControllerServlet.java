@@ -112,7 +112,13 @@ public class FrontControllerServlet extends HttpServlet {
             }
 
             try {
-                Object controllerInstance = matchedMapping.getControllerClass().getDeclaredConstructor().newInstance();
+                ServletContext context = getServletContext();
+                Object controllerInstance = context.getAttribute(matchedMapping.getControllerClass().getName());
+
+                if(controllerInstance == null) {
+                    context.setAttribute(matchedMapping.getControllerClass().getName(),
+                                            matchedMapping.getControllerClass().getDeclaredConstructor().newInstance());
+                }
 
                 Parameter[] parameters = matchedMapping.getMethod().getParameters();
                 Object[] arguments = new Object[parameters.length];
